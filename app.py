@@ -12,8 +12,18 @@ import decSound
 import traceback
 
 # Configuration
-UPLOAD_FOLDER = 'uploads'
-STATIC_FOLDER = 'static'
+IS_VERCEL = os.environ.get('VERCEL') == '1'
+
+if IS_VERCEL:
+    UPLOAD_FOLDER = '/tmp/uploads'
+    GENERATED_FOLDER = '/tmp/generated'
+else:
+    # Use explicit absolute path based on __file__ to avoid issues
+    import sys
+    base_path = os.path.dirname(os.path.abspath(__file__))
+    UPLOAD_FOLDER = os.path.join(base_path, 'uploads')
+    GENERATED_FOLDER = os.path.join(base_path, 'static', 'generated')
+
 ALLOWED_EXTENSIONS = {'csv'}
 ALLOWED_AUDIO_EXTENSIONS = {'wav'}
 
@@ -22,8 +32,12 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['SECRET_KEY'] = 'dev-secret-key-sound-of-data'
 
 # Ensure directories exist
-os.makedirs(os.path.join(app.root_path, UPLOAD_FOLDER), exist_ok=True)
-os.makedirs(os.path.join(app.root_path, STATIC_FOLDER, 'generated'), exist_ok=True)
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs(GENERATED_FOLDER, exist_ok=True)
+
+@app.route('/files/<filename>')
+def serve_generated_file(filename):
+    return send_file(os.path.join(GENERATED_FOLDER, filename))
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -59,7 +73,7 @@ def upload_page():
         if os.path.exists(app.config['UPLOAD_FOLDER']):
             for f in os.listdir(app.config['UPLOAD_FOLDER']):
                 if f.endswith('.csv'):
-                    filepath = os.path.join(app.config['UPLOAD_FOLDER'], f)
+                    filepath = os.path.join(UPLOAD_FOLDER, f)
                     # Get display name (remove UUID prefix if present)
                     display_name = f.split('_', 1)[1] if '_' in f else f
                     history.append({
@@ -86,7 +100,7 @@ def upload_file_action():
     
     if file and allowed_file(file.filename):
         filename = f"{uuid.uuid4()}_{file.filename}"
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        filepath = os.path.join(UPLOAD_FOLDER, filename)
         file.save(filepath)
         return redirect(url_for('visualize_page', filename=filename))
     
@@ -99,13 +113,13 @@ def visualize_page():
     if not filename:
         return redirect(url_for('upload_page'))
     
-    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    filepath = os.path.join(UPLOAD_FOLDER, filename)
     if not os.path.exists(filepath):
         flash('File not found.', 'error')
         return redirect(url_for('upload_page'))
         
     output_filename = f"img_{filename}.png"
-    output_path = os.path.join(app.root_path, STATIC_FOLDER, 'generated', output_filename)
+    output_path = os.path.join(GENERATED_FOLDER, output_filename)
     
     # Generate image if not exists
     if not os.path.exists(output_path):
@@ -123,7 +137,7 @@ def visualize_page():
             flash(f"Error generating image: {str(e)}", 'error')
             return redirect(url_for('upload_page'))
     
-    image_url = url_for('static', filename=f'generated/{output_filename}')
+    image_url = url_for('serve_generated_file', filename=output_filename)
     return render_template('visualize.html', filename=filename, image_url=image_url)
 
 @app.route('/generate_audio_action', methods=['POST'])
@@ -133,9 +147,9 @@ def generate_audio_action():
     min_freq = int(request.form.get('min_freq', 200))
     max_freq = int(request.form.get('max_freq', 2000))
     
-    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    filepath = os.path.join(UPLOAD_FOLDER, filename)
     output_audio_filename = f"audio_{filename}.wav"
-    output_path = os.path.join(app.root_path, STATIC_FOLDER, 'generated', output_audio_filename)
+    output_path = os.path.join(GENERATED_FOLDER, output_audio_filename)
     
     try:
         numbers_array = get_numbers_from_csv(filepath)
@@ -159,7 +173,7 @@ def sonify_page():
     if not audio_file:
          return redirect(url_for('upload_page'))
          
-    audio_url = url_for('static', filename=f'generated/{audio_file}')
+    audio_url = url_for('serve_generated_file', filename=audio_file)
     return render_template('sonify.html', audio_url=audio_url, filename=filename)
 
 @app.route('/reverse_upload_page')
@@ -178,7 +192,7 @@ def reverse_action():
     
     if file and allowed_audio_file(file.filename):
         filename = f"{uuid.uuid4()}_{file.filename}"
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        filepath = os.path.join(UPLOAD_FOLDER, filename)
         file.save(filepath)
         
         duration = int(request.form.get('duration', 10))
@@ -192,11 +206,11 @@ def reverse_action():
                 return redirect(url_for('reverse_upload_page'))
                 
             out_img_filename = f"decoded_{filename}.png"
-            out_img_path = os.path.join(app.root_path, STATIC_FOLDER, 'generated', out_img_filename)
+            out_img_path = os.path.join(GENERATED_FOLDER, out_img_filename)
             image.save(out_img_path)
             
             out_csv_filename = f"decoded_{filename}.csv"
-            out_csv_path = os.path.join(app.root_path, STATIC_FOLDER, 'generated', out_csv_filename)
+            out_csv_path = os.path.join(GENERATED_FOLDER, out_csv_filename)
             with open(out_csv_path, 'w', newline='') as f:
                 writer = csv.writer(f)
                 num_elements = len(intensities)
@@ -230,8 +244,8 @@ def decoded_page():
     if not image_file or not csv_file:
          return redirect(url_for('reverse_upload_page'))
          
-    image_url = url_for('static', filename=f'generated/{image_file}')
-    csv_url = url_for('static', filename=f'generated/{csv_file}')
+    image_url = url_for('serve_generated_file', filename=image_file)
+    csv_url = url_for('serve_generated_file', filename=csv_file)
     
     metadata = {
         'sample_rate': request.args.get('sample_rate'),
@@ -243,7 +257,7 @@ def decoded_page():
     
     # We also need the table data to display in the UI like in the picture
     csv_data = []
-    csv_path = os.path.join(app.root_path, STATIC_FOLDER, 'generated', csv_file)
+    csv_path = os.path.join(GENERATED_FOLDER, csv_file)
     if os.path.exists(csv_path):
         with open(csv_path, newline='') as f:
             reader = csv.reader(f)
