@@ -27,6 +27,7 @@
 
             <form action="{{ url_for('generate_audio_action') }}" method="post">
                 <input type="hidden" name="filename" value="{{ filename }}">
+                <input type="hidden" name="numbers_json" value="{{ numbers_json }}">
 
                 <div style="margin-bottom: 2rem;">
                     <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">

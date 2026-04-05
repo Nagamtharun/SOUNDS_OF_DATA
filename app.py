@@ -10,6 +10,9 @@ import genSound
 import vizSound
 import decSound
 import traceback
+import base64
+import json
+import io
 
 # Configuration
 IS_VERCEL = os.environ.get('VERCEL') == '1'
@@ -102,7 +105,26 @@ def upload_file_action():
         filename = f"{uuid.uuid4()}_{file.filename}"
         filepath = os.path.join(UPLOAD_FOLDER, filename)
         file.save(filepath)
-        return redirect(url_for('visualize_page', filename=filename))
+        
+        try:
+            numbers_array = get_numbers_from_csv(filepath)
+            if not numbers_array:
+                 flash('No valid numbers found in CSV.', 'error')
+                 return redirect(url_for('upload_page'))
+
+            rgb_image, _ = numToRgb.generate_image_data(numbers_array)
+            img_byte_arr = io.BytesIO()
+            rgb_image.save(img_byte_arr, format='PNG')
+            img_b64 = base64.b64encode(img_byte_arr.getvalue()).decode('utf-8')
+            image_url = f"data:image/png;base64,{img_b64}"
+            
+            numbers_json = json.dumps(numbers_array)
+            
+            return render_template('visualize.html', filename=file.filename, image_url=image_url, numbers_json=numbers_json)
+        except Exception as e:
+            traceback.print_exc()
+            flash(f"Error generating image: {str(e)}", 'error')
+            return redirect(url_for('upload_page'))
     
     flash('Invalid file type. Please upload a CSV.', 'error')
     return redirect(url_for('upload_page'))
@@ -146,24 +168,29 @@ def generate_audio_action():
     duration = int(request.form.get('duration', 10))
     min_freq = int(request.form.get('min_freq', 200))
     max_freq = int(request.form.get('max_freq', 2000))
+    numbers_json = request.form.get('numbers_json')
     
-    filepath = os.path.join(UPLOAD_FOLDER, filename)
-    output_audio_filename = f"audio_{filename}.wav"
-    output_path = os.path.join(GENERATED_FOLDER, output_audio_filename)
-    
+    if not numbers_json:
+        flash("Data lost between requests. Please start over.", "error")
+        return redirect(url_for('upload_page'))
+        
     try:
-        numbers_array = get_numbers_from_csv(filepath)
+        numbers_array = json.loads(numbers_json)
         _, grayscale_data = numToRgb.generate_image_data(numbers_array)
         
         final_sound = genSound.generate_sound_from_data(grayscale_data, duration=duration, min_freq=min_freq, max_freq=max_freq)
-        final_sound.export(output_path, format="wav")
+        
+        sound_byte_arr = io.BytesIO()
+        final_sound.export(sound_byte_arr, format="wav")
+        sound_b64 = base64.b64encode(sound_byte_arr.getvalue()).decode('utf-8')
+        audio_url = f"data:audio/wav;base64,{sound_b64}"
+        
+        return render_template('sonify.html', audio_url=audio_url, filename=filename)
         
     except Exception as e:
         traceback.print_exc()
         flash(f"Error generating audio: {str(e)}", 'error')
-        return redirect(url_for('visualize_page', filename=filename))
-        
-    return redirect(url_for('sonify_page', filename=filename, audio_file=output_audio_filename))
+        return redirect(url_for('upload_page'))
 
 @app.route('/sonify_page')
 def sonify_page():
@@ -205,28 +232,21 @@ def reverse_action():
                 flash('Could not decode audio.', 'error')
                 return redirect(url_for('reverse_upload_page'))
                 
-            out_img_filename = f"decoded_{filename}.png"
-            out_img_path = os.path.join(GENERATED_FOLDER, out_img_filename)
-            image.save(out_img_path)
+            img_byte_arr = io.BytesIO()
+            image.save(img_byte_arr, format='PNG')
+            image_url = f"data:image/png;base64,{base64.b64encode(img_byte_arr.getvalue()).decode('utf-8')}"
             
-            out_csv_filename = f"decoded_{filename}.csv"
-            out_csv_path = os.path.join(GENERATED_FOLDER, out_csv_filename)
-            with open(out_csv_path, 'w', newline='') as f:
-                writer = csv.writer(f)
-                num_elements = len(intensities)
-                N = int(num_elements**0.5)
-                for i in range(N):
-                    writer.writerow(intensities[i*N:(i+1)*N])
-                    
-            return redirect(url_for('decoded_page', 
-                                    image_file=out_img_filename, 
-                                    csv_file=out_csv_filename,
-                                    sample_rate=metadata['sample_rate'],
-                                    bit_depth=metadata['bit_depth'],
-                                    total_samples=metadata['total_samples'],
-                                    duration_sec=metadata['duration_sec'],
-                                    encoding=metadata['encoding']
-                                    ))
+            num_elements = len(intensities)
+            N = int(num_elements**0.5)
+            csv_data = [list(intensities[i*N:(i+1)*N]) for i in range(N)]
+            
+            csv_buffer = io.StringIO()
+            writer = csv.writer(csv_buffer)
+            for row in csv_data: writer.writerow(row)
+            csv_b64 = base64.b64encode(csv_buffer.getvalue().encode('utf-8')).decode('utf-8')
+            csv_url = f"data:text/csv;base64,{csv_b64}"
+            
+            return render_template('decoded.html', image_url=image_url, csv_url=csv_url, metadata=metadata, csv_data=csv_data)
             
         except Exception as e:
             traceback.print_exc()
