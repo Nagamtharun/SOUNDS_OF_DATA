@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block content %}
+<header style="text-align: center; margin-top: 10vh; margin-bottom: 5rem;" class="fade-in">
+    <h1>≈ THE SOUND OF DATA</h1>
+    <p class="subtitle"
+        style="margin-bottom: 3rem; max-width: 800px; margin-left: auto; margin-right: auto; line-height: 1.8;">
+        Transform your numerical datasets into immersive visual and auditory experiences. Our innovative platform
+        converts data into RGB color mappings and then sonifies those colors into rich soundscapes, creating a
+        multi-sensory approach to data exploration.
+        <br><br>
+        Whether you're seeking accessibility solutions, discovering hidden patterns, or exploring creative data
+        visualization, our platform bridges the gap between seeing and hearing your data story.
+    </p>
+    <div style="display: flex; gap: 1rem; justify-content: center;">
+        <a href="{{ url_for('upload_page') }}" class="btn">
+            Start Journey &rarr;
+        </a>
+        <a href="{{ url_for('reverse_upload_page') }}" class="btn" style="background-color: #3b82f6;">
+            Reverse Soundification &larr;
+        </a>
+    </div>
+</header>
+
+<div class="steps-grid fade-in" style="animation-delay: 0.2s;">
+    <div class="step-card">
+        <div class="step-icon">📂</div>
+        <h3>1. Upload</h3>
+        <p style="color: #6b7280;">Submit your CSV dataset. We analyze the numerical patterns instantly.</p>
+    </div>
+    <div class="step-card">
+        <div class="step-icon">🎨</div>
+        <h3>2. Visualize</h3>
+        <p style="color: #6b7280;">See your data transformed into a unique color-coded heat map.</p>
+    </div>
+    <div class="step-card">
+        <div class="step-icon">🎵</div>
+        <h3>3. Sonify</h3>
+        <p style="color: #6b7280;">Listen to the melody of your data through frequency mapping.</p>
+    </div>
+
+    <div class="step-card">
+        <div class="step-icon">🧠</div>
+        <h3>4. Discover</h3>
+        <p style="color: #6b7280;">Find hidden trends and outliers through multi-sensory exploration.</p>
+    </div>
+    <div class="step-card">
+        <div class="step-icon">🚀</div>
+        <h3>5. Share</h3>
+        <p style="color: #6b7280;">Export your creations as images and WAV files to share.</p>
+    </div>
+    <div class="step-card">
+        <div class="step-icon">🔬</div>
+        <h3>6. Research</h3>
+        <p style="color: #6b7280;">Ideal for accessibility research and alternative data analysis.</p>
+    </div>
+</div>
+{% endblock %}

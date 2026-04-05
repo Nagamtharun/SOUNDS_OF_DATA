@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Sound of Data</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>≈ THE SOUND OF DATA</h1>
+        <p class="subtitle">Bridging Visual Data and Auditory Perception<br>See your data. Hear your data. Feel the patterns.</p>
+        <button id="scrollBtn" class="btn">Try Now → Upload Data</button>
+    </header>
+
+    <div id="uploadSection" class="section">
+        <h2>Upload Your Dataset</h2>
+        <p style="color: #6B7280; margin-bottom: 1.5rem;">Upload CSV files to begin the data sonification journey.</p>
+        
+        <div class="upload-area" id="dropZone">
+            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#4F46E5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 1rem;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+            <p><strong>Drop your file here or click to browse</strong></p>
+            <p style="font-size: 0.875rem; color: #9CA3AF;">Supported format: CSV</p>
+            <input type="file" id="fileInput" name="file" accept=".csv" class="hidden">
+            <button class="btn" onclick="document.getElementById('fileInput').click()" style="margin-top: 1rem;">Choose File</button>
+        </div>
+        <div id="uploadStatus" style="margin-top: 1rem; text-align: center;"></div>
+    </div>
+
+    <!-- Data Info & Image Section -->
+    <div id="resultSection" class="section hidden">
+        <div class="grid-2">
+            <div>
+                <h3>Generated RGB Image</h3>
+                <div id="imageContainer" style="min-height: 200px; display: flex; align-items: center; justify-content: center; background: #f9fafb; border-radius: 0.5rem;">
+                    <span style="color: #9ca3af;">Image will appear here</span>
+                </div>
+                <a id="downloadImgBtn" href="#" class="btn hidden" style="margin-top: 1rem; width: 100%; text-align: center;" download>Download Image</a>
+            </div>
+            <div>
+                <h3>Data Info:</h3>
+                <div class="info-box">
+                    <p>Numbers count: <span id="infoCount">-</span></p>
+                    <p>Matrix Size: <span id="infoMatrix">-</span></p>
+                    <p>Sample Values: <span id="infoSample">-</span></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Audio Section -->
+    <div id="audioSection" class="section hidden">
+        <h3>Generate Audio Parameters</h3>
+        
+        <div style="margin-bottom: 1.5rem;">
+            <label>Duration per tone (ms): <span id="valDuration">10</span></label>
+            <input type="range" id="paramDuration" min="1" max="100" value="10">
+        </div>
+
+        <div style="margin-bottom: 1.5rem;">
+            <label>Min Frequency (Hz): <span id="valMinFreq">200</span></label>
+            <input type="range" id="paramMinFreq" min="50" max="1000" value="200">
+        </div>
+
+        <div style="margin-bottom: 1.5rem;">
+            <label>Max Frequency (Hz): <span id="valMaxFreq">2000</span></label>
+            <input type="range" id="paramMaxFreq" min="1000" max="5000" value="2000">
+        </div>
+
+        <button id="generateAudioBtn" class="btn">Generate Audio</button>
+        <div id="audioStatus" style="margin-top: 1rem;"></div>
+        
+        <div id="audioPlayerContainer" class="hidden" style="margin-top: 2rem; background: #EEF2FF; padding: 1.5rem; border-radius: 1rem;">
+            <audio id="audioPlayer" controls style="width: 100%;"></audio>
+            <a id="downloadAudioBtn" href="#" style="display: block; margin-top: 1rem; color: var(--primary); text-align: center;">Download Audio (.wav)</a>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    // State
+    let currentFilename = null;
+
+    // Elements
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const scrollBtn = document.getElementById('scrollBtn');
+    
+    // Smooth Scroll
+    scrollBtn.addEventListener('click', () => {
+        document.getElementById('uploadSection').scrollIntoView({ behavior: 'smooth' });
+    });
+
+    // Reveal animations
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+            }
+        });
+    });
+    document.querySelectorAll('.section').forEach((section) => {
+        observer.observe(section);
+    });
+
+    // File Upload Logic
+    function handleBytes(file) {
+        if (!file) return;
+        
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        document.getElementById('uploadStatus').innerHTML = 'Uploading... <div class="loader"></div>';
+
+        fetch('/upload', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                currentFilename = data.filename;
+                document.getElementById('uploadStatus').innerText = 'Upload Successful!';
+                
+                // Show info
+                document.getElementById('resultSection').classList.remove('hidden');
+                document.getElementById('resultSection').classList.add('visible'); // trigger anim
+                document.getElementById('audioSection').classList.remove('hidden');
+                document.getElementById('audioSection').classList.add('visible');
+                
+                document.getElementById('infoCount').innerText = data.info.numbers_count;
+                document.getElementById('infoMatrix').innerText = data.info.matrix_size;
+                document.getElementById('infoSample').innerText = data.info.samples.join(', ') + '...';
+                
+                // Auto generate image
+                generateImage();
+            } else {
+                document.getElementById('uploadStatus').innerText = 'Error: ' + data.error;
+            }
+        })
+        .catch(err => {
+            document.getElementById('uploadStatus').innerText = 'Error uploading file.';
+            console.error(err);
+        });
+    }
+
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('dragover');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        if (e.dataTransfer.files.length) {
+            handleBytes(e.dataTransfer.files[0]);
+        }
+    });
+
+    fileInput.addEventListener('change', () => {
+        if (fileInput.files.length) {
+            handleBytes(fileInput.files[0]);
+        }
+    });
+
+    function generateImage() {
+        if (!currentFilename) return;
+        
+        const container = document.getElementById('imageContainer');
+        container.innerHTML = 'Generating Image... <div class="loader"></div>';
+        
+        fetch('/generate_image', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ filename: currentFilename })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                container.innerHTML = `<img src="${data.image_url}" class="generated-image" alt="Data Visual">`;
+                const dlBtn = document.getElementById('downloadImgBtn');
+                dlBtn.href = data.image_url;
+                dlBtn.classList.remove('hidden');
+            } else {
+                container.innerText = 'Error generating image: ' + data.error;
+            }
+        });
+    }
+
+    // Sliders
+    ['Duration', 'MinFreq', 'MaxFreq'].forEach(key => {
+        const input = document.getElementById('param' + key);
+        const display = document.getElementById('val' + key);
+        input.addEventListener('input', () => {
+            display.innerText = input.value;
+        });
+    });
+
+    document.getElementById('generateAudioBtn').addEventListener('click', () => {
+        if (!currentFilename) return;
+        
+        const btn = document.getElementById('generateAudioBtn');
+        const status = document.getElementById('audioStatus');
+        const originalText = btn.innerText;
+        
+        btn.disabled = true;
+        btn.innerText = 'Generating... (this may take a while)';
+        status.innerHTML = '<div class="loader"></div> Processing sound matrix...';
+
+        const params = {
+            filename: currentFilename,
+            duration: document.getElementById('paramDuration').value,
+            min_freq: document.getElementById('paramMinFreq').value,
+            max_freq: document.getElementById('paramMaxFreq').value
+        };
+
+        fetch('/generate_audio', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(params)
+        })
+        .then(res => res.json())
+        .then(data => {
+            btn.disabled = false;
+            btn.innerText = originalText;
+            status.innerText = '';
+            
+            if (data.success) {
+                const player = document.getElementById('audioPlayer');
+                const container = document.getElementById('audioPlayerContainer');
+                const dlBtn = document.getElementById('downloadAudioBtn');
+                
+                player.src = data.audio_url;
+                dlBtn.href = data.audio_url;
+                container.classList.remove('hidden');
+                player.play();
+            } else {
+                status.innerText = 'Error: ' + data.error;
+            }
+        })
+        .catch(err => {
+            btn.disabled = false;
+            btn.innerText = originalText;
+            status.innerText = 'Network error.';
+        });
+    });
+
+</script>
+
+</body>
+</html>

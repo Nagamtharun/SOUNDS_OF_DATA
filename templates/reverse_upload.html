@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="fade-in">
+    <div style="margin-bottom: 2rem;">
+        <a href="{{ url_for('upload_page') }}" class="btn" style="background: white; color: black; border: 1px solid #ccc; font-weight: normal; padding: 0.5rem 1rem;">
+            &larr; Back to Audio Generation
+        </a>
+    </div>
+
+    <div class="glass-card" style="max-width: 800px; margin: 0 auto; text-align: center; padding: 3rem;">
+        <h2 style="font-size: 2rem; margin-bottom: 0.5rem; color: #111827;">Reverse Sonification – Exact Reconstruction</h2>
+        <p style="color: #6b7280; margin-bottom: 1.5rem;">Recovering the Original Dataset from Deterministic Audio Encoding</p>
+        <p style="color: #9ca3af; font-size: 0.9rem; margin-bottom: 3rem; max-width: 600px; margin-left: auto; margin-right: auto; line-height: 1.5;">
+            This module decodes the generated WAV audio using deterministic PCM extraction to reconstruct the exact original numerical dataset. Reconstruction must match the original data exactly (bit-level accuracy for integers, floating tolerance &le; 10<sup>-6</sup> for floats).
+        </p>
+
+        <form action="{{ url_for('reverse_action') }}" method="post" enctype="multipart/form-data">
+            <div style="border: 1px dashed #e5e7eb; border-radius: 1rem; padding: 3rem; background: #fafafa; margin-bottom: 2rem;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 1rem;">
+                    <path d="M9 18V5l12-2v13"></path>
+                    <circle cx="6" cy="18" r="3"></circle>
+                    <circle cx="18" cy="16" r="3"></circle>
+                </svg>
+                
+                <h3 style="font-size: 1.25rem; margin-bottom: 0.5rem;">Select or Upload Encoded Audio</h3>
+                <p style="color: #9ca3af; font-size: 0.9rem; margin-bottom: 2rem;">Upload a WAV file (PCM only)</p>
+
+                <input type="file" id="fileInput" name="file" accept=".wav" required style="display: none;" onchange="updateFileName(this)">
+
+                <button type="button" onclick="document.getElementById('fileInput').click()" style="background: white; border: 1px solid #d1d5db; border-radius: 0.5rem; padding: 0.75rem 1.5rem; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem; margin-bottom: 2rem; color: #374151;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                    <span id="fileNameDisplay">Upload WAV File</span>
+                </button>
+
+                <div>
+                    <button type="submit" style="background: linear-gradient(to right, #93c5fd, #c084fc); color: white; border: none; border-radius: 0.5rem; padding: 0.75rem 3rem; font-weight: 600; font-size: 1.1rem; cursor: pointer; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+                        Decode Audio
+                    </button>
+                </div>
+            </div>
+
+            <!-- Optional parameters -->
+            <input type="hidden" name="duration" value="10">
+            <input type="hidden" name="min_freq" value="200">
+            <input type="hidden" name="max_freq" value="2000">
+        </form>
+
+        <div style="text-align: left; margin-top: 1rem;">
+            <p style="color: #9ca3af; font-size: 0.85rem; margin-bottom: 1rem;">Validation Requirements:</p>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; text-align: left; color: #4b5563; font-size: 0.85rem;">
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <span style="color: #10b981;">&#10003;</span> WAV format only
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <span style="color: #10b981;">&#10003;</span> PCM 16-bit or 32-bit
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <span style="color: #10b981;">&#10003;</span> Fixed sample rate (44100 Hz)
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <span style="color: #10b981;">&#10003;</span> No compression
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function updateFileName(input) {
+        const display = document.getElementById('fileNameDisplay');
+        if (input.files && input.files.length > 0) {
+            display.textContent = input.files[0].name;
+            display.parentElement.style.borderColor = '#3b82f6';
+            display.parentElement.style.color = '#3b82f6';
+        } else {
+            display.textContent = 'Upload WAV File';
+            display.parentElement.style.borderColor = '#d1d5db';
+            display.parentElement.style.color = '#374151';
+        }
+    }
+</script>
+{% endblock %}

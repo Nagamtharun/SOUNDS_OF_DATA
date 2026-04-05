@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="glass-card fade-in">
+    <div style="text-align: center; margin-bottom: 3rem;">
+        <h2>Upload Your Dataset</h2>
+        <p class="subtitle">Drag & drop your CSV file here to begin the transformation.</p>
+    </div>
+
+    <form action="{{ url_for('upload_file_action') }}" method="post" enctype="multipart/form-data">
+        <div class="upload-area" id="dropZone" onclick="document.getElementById('fileInput').click()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+                style="margin-bottom: 2rem; color: var(--primary);">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+            <p style="font-size: 1.25rem; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-main);">Drop your
+                CSV here</p>
+            <p style="color: var(--text-muted); margin-bottom: 2rem;">or click to browse from your computer</p>
+
+            <input type="file" id="fileInput" name="file" accept=".csv" required style="display: none;"
+                onchange="this.form.submit()">
+
+            <button type="button" class="btn">
+                Browse Files
+            </button>
+        </div>
+    </form>
+
+    <div style="text-align: center; margin-top: 2rem;">
+        <a href="{{ url_for('index') }}"
+            style="color: var(--text-muted); text-decoration: none; font-size: 0.9rem;">&larr; Back to Home</a>
+    </div>
+
+    {% if history %}
+    <div class="fade-in" style="margin-top: 4rem; animation-delay: 0.2s;">
+        <h3
+            style="text-align: center; color: var(--text-muted); font-size: 1rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 1.5rem;">
+            Recent Uploads</h3>
+        <div style="display: grid; gap: 1rem;">
+            {% for item in history %}
+            <a href="{{ url_for('visualize_page', filename=item.filename) }}" class="history-item"
+                style="display: flex; align-items: center; padding: 1rem; background: white; border-radius: 0.75rem; text-decoration: none; color: var(--text-main); transition: all 0.2s; border: 1px solid #e5e7eb;">
+                <span style="margin-right: 1rem; color: var(--primary); font-size: 1.25rem;">📄</span>
+                <span style="font-weight: 500;">{{ item.display_name }}</span>
+                <span style="font-size: 1.25rem; color: #9ca3af; margin-left: auto;">&rarr;</span>
+            </a>
+            {% endfor %}
+        </div>
+        <style>
+            .history-item:hover {
+                transform: translateX(4px);
+                border-color: var(--primary);
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            }
+        </style>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.style.borderColor = 'var(--primary)';
+        dropZone.style.background = '#eef2ff';
+    });
+
+    dropZone.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        dropZone.style.borderColor = '#cbd5e1';
+        dropZone.style.background = '#ffffff';
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        fileInput.files = e.dataTransfer.files;
+        fileInput.form.submit();
+    });
+</script>
+{% endblock %}

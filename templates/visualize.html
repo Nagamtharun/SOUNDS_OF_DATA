@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="fade-in">
+    <div style="margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between;">
+        <h2>Visual Analysis</h2>
+        <span class="step-icon" style="font-size: 1.5rem; padding: 0.5rem 1rem;">Step 2/3</span>
+    </div>
+
+    <div class="grid-2">
+        <div class="glass-card">
+            <h3 style="margin-bottom: 1.5rem;">Visualized Heatmap</h3>
+            <div id="imageContainer"
+                style="min-height: 300px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.02); border-radius: 1rem; margin-bottom: 1.5rem; border: 1px dashed var(--glass-border); padding: 1rem;">
+                <img src="{{ image_url }}" alt="Generated Visual" class="generated-image"
+                    style="width: 100%; image-rendering: pixelated; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);">
+            </div>
+            <a href="{{ image_url }}" class="btn" style="width: 100%; box-sizing: border-box;" download>
+                <span style="margin-right: 0.5rem;">⬇</span> Download Image
+            </a>
+        </div>
+
+        <div class="glass-card">
+            <h3 style="margin-bottom: 1.5rem;">Configure Sonification</h3>
+            <p class="subtitle" style="font-size: 1rem; margin-bottom: 2rem;">Adjust the parameters to shape how your
+                data sounds. The frequency range determines the pitch limits.</p>
+
+            <form action="{{ url_for('generate_audio_action') }}" method="post">
+                <input type="hidden" name="filename" value="{{ filename }}">
+
+                <div style="margin-bottom: 2rem;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                        <label style="font-weight: 600;">Tone Duration</label>
+                        <span style="color: var(--primary); font-weight: 600;"><span id="valDuration">10</span>
+                            ms</span>
+                    </div>
+                    <input type="range" name="duration" id="paramDuration" min="1" max="100" value="10"
+                        oninput="document.getElementById('valDuration').innerText = this.value">
+                </div>
+
+                <div style="margin-bottom: 2rem;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                        <label style="font-weight: 600;">Min Frequency</label>
+                        <span style="color: var(--primary); font-weight: 600;"><span id="valMinFreq">200</span>
+                            Hz</span>
+                    </div>
+                    <input type="range" name="min_freq" id="paramMinFreq" min="50" max="1000" value="200"
+                        oninput="document.getElementById('valMinFreq').innerText = this.value">
+                </div>
+
+                <div style="margin-bottom: 3rem;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                        <label style="font-weight: 600;">Max Frequency</label>
+                        <span style="color: var(--primary); font-weight: 600;"><span id="valMaxFreq">2000</span>
+                            Hz</span>
+                    </div>
+                    <input type="range" name="max_freq" id="paramMaxFreq" min="1000" max="5000" value="2000"
+                        oninput="document.getElementById('valMaxFreq').innerText = this.value">
+                </div>
+
+                <button type="submit" class="btn" style="width: 100%; font-size: 1.25rem; padding: 1.25rem;">
+                    Generate Audio <span style="margin-left: 0.5rem;">🎵</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div style="text-align: center; margin-top: 3rem;">
+        <a href="{{ url_for('upload_page') }}"
+            style="color: var(--text-muted); text-decoration: none; font-size: 0.9rem;">&larr; Back to Upload Page</a>
+    </div>
+</div>
+{% endblock %}
